@@ -1,0 +1,209 @@
+---
+title: "SVM project"
+author: "Jacky/Dottie Maya"
+date: "11/15/2019"
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+# Introduction
+This is an implementation of a support vector machine designed to identify short-term stock price changes, based on previous stock parameters: open, low, high, close, volume. I'm implementing a support vector machine to see if i can identify profit opportunities for short term stock prices.
+
+## Stock selected for this exercise:
+
+<!-- put your justification/choice here: !-->
+
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(e1071)
+```
+
+## get data:
+
+Variable names from data set:
+price.open	price.high	price.low	price.close	volume	price.adjusted	ret.adjusted.prices	ret.closing.prices	AVG Price of 5 Days	AVGChangeof5Days	Change
+
+
+```{r}
+msftaznData = read.csv('MSFTAZNstockpriceTrimmed.csv')
+attach(msftaznData)
+# set up data frame
+msftaznDataFrame = data.frame(open=price.open, high=price.high,
+        low=price.low, close=price.adjusted,volume= volume/10000, avg_change=AVGChangeof5Days, change = Change )
+head(msftaznDataFrame)
+remove(msftaznData)
+
+plot(msftaznDataFrame)
+
+```
+
+```{r}
+plot(msftaznDataFrame)
+```
+
+
+## classification model, categorical response
+
+### traditional interface:
+```{r}
+x <- subset(msftaznDataFrame, select = -change)
+y <- msftaznDataFrame$change
+model1 <- svm(x, y) 
+
+print(model1)
+summary(model1)
+```
+
+
+
+## how well did the model fit?
+
+```{r}
+pred <- predict(model1, x)
+
+# Check accuracy:
+table(pred, y)
+```
+
+## decision values
+
+```{r}
+# compute decision values and probabilities:
+pred <- predict(model1, x, decision.values = TRUE)
+attr(pred, "decision.values")[1:6,]
+
+# visualize (classes by color, SV by crosses):
+plot(cmdscale(dist(msftaznDataFrame[,-7])),
+     col = as.integer(msftaznDataFrame[,7]),xlab="normalized X", ylab = "$ change",
+     pch = c("o","+")[1:150 %in% model1$index + 1])
+legend('bottomleft',c('data','prediction'),pch=c('0','+'))
+grid()
+
+     
+```
+
+
+# train and test set:
+
+```{r}
+pctTrain=0.70
+nObs = length(x[,1])
+nTrain = round(pctTrain*nObs,0)
+TrainSetIndex = 1:nTrain
+
+# or ?
+#TrainSetIndex = sample(1:nObs, nTrain)
+```
+
+## set up training set, test set
+
+```{r}
+# first the training set
+
+XtrainSet = msftaznDataFrame[TrainSetIndex,-7]
+YtrainSet = msftaznDataFrame$change[TrainSetIndex]
+```
+
+## get the model from training set.. 
+
+```{r}
+model2 <- svm(XtrainSet, YtrainSet) 
+
+print(model2)
+summary(model2)
+```
+
+## now the test set.. 
+
+```{r}
+XtestSet = msftaznDataFrame[(nTrain:nObs),-7]
+YtestSet = msftaznDataFrame$Change[nTrain:nObs]
+```
+
+## and evaluate with the test data
+
+```{r}
+pred2 <- predict(model2, XtestSet)
+# And the accuracy..
+
+table(pred2, YtestSet)
+```
+
+## tune
+
+```{r}
+stockTuned <- tune.svm(XtrainSet, YtrainSet, gamma = 2^(-1:1), cost = 2^(-1:4))
+
+summary(stockTuned)
+plot(stockTuned)
+```
+
+```{r}
+#use optimized parameters... 
+model3 <- svm(XtrainSet, YtrainSet, gamma=0.5, cost=4 ) 
+
+print(model3)
+summary(model3)
+```
+
+```{r}
+
+
+pred3 <- predict(model3, XtestSet)
+# And the accuracy..
+
+table(pred3, YtestSet)
+
+```
+# SVM assignment
+
+## complete an rmarkdown file on the stock you selected.   
+  You will turn in the URL for your github accout that has the repo for this assignment.
+
+### Identify the stock you use for this assignment.  
+  Why did you choose this particular stock?  
+  
+  I chose these stocks because I use Microsoft products and, as for AstraZeneca, they are a client of Simulations Plus. I was interested in how well their stocks are.
+
+<!--   Include in your final report a graph of the stock closing price over the period 20 Jan 2018 to 13 Sept 2019.  Include the .csv file in your repo for the stock you selected.  !-->
+
+### Use this template to get the SVM:  
+
+  1. Training and Test sets:    
+  
+  I used 70% of the stock data for the training set and selected it from online stock data. I used it in chronological order to keep the data in order.
+  
+<!--    What percent of the stock data did you use for the training set?  How did you select the training set size?  
+    Did you select the training set to be the chronological first data observations, and the test set to be the following observations, or did you choose to randomly sample the stock data to get the training set and use the remaining observations for the test set?  Justification for your choice? !-->  
+    
+  2. How well did the SVM do?  
+  
+  The Microsoft stock did very well, but AstraZeneca was more bumpy and contains a lot of down stock prices.
+  
+<!-- show the table of predicted vs truth for the whole data set, and then the same table for predicted vs actual results for just the test set.  !-->
+
+  3. Tune the algorithm- i.e. find optimal gamma and cost values.
+  
+  Used gama = 0.5 and cost = 4.
+  
+  <!--Use these valuse to recompute the table of predicted vs actual results for the test set. !-->
+
+### Evaluate SVM performance     
+
+  1. Did you exmine using other than the 'open', 'low', 'high', 'close' prices and volume as predictors? 
+  
+  No, I used those predictors.
+  
+  <!-- do you have any evidence that some particular set of the explanatory variables can improove predictions? !-->
+  
+  2. Use the SVM you developed to predict stock moves on 16 - 20 Sept. 2019.  Compute the ROI assuming the SVM identifies an opportunity, (for example use around $1000 on each of the SVM predictions)
+<!-- There are 5 days available for prediction; if the daily prediction was 'U' buy the stock, then cash out when/if price increases within 5 days. If the daily predictions is 'D', sell the shock short and cash out within 5 days.  If the prediction is E, no investment.  Include your ROI results !-->  
+  
+  3.  Would you put your own $$ in this SVM?  
+  
+  I would put my stock into Microsoft over AstraZeneca.
+    
+  

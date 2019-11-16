@@ -10,14 +10,14 @@ first.date <- Sys.Date() - 550
 last.date <- Sys.Date()
 freq.data <- 'daily'
 # set tickers
-tickers <- c('NFLX','HD' )
+tickers <- c('MSFT','AZN' )
 
 l.out <- BatchGetSymbols(tickers = tickers, 
                          first.date = first.date,
                          last.date = last.date, 
                          freq.data = freq.data,
                          cache.folder = file.path(tempdir(), 
-                        'BGS_Cache') ) # cache in tempdir()
+                                                  'BGS_Cache') ) # cache in tempdir()
 
 head(l.out)
 
@@ -41,6 +41,4 @@ plot(l.out$df.tickers$price.close[l.out$df.tickers$ticker == tickers[2]],
 grid()
 
 
-#write.csv(l.out$df.tickers,'NFLX.csv')
-
-
+write.csv(l.out$df.tickers,'MSFTAZN.csv')
